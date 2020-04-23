@@ -1,0 +1,50 @@
+.TH "DNF-KPATCH" 8
+.SH NAME
+dnf\-kpatch \- kpatch patch module installation plugin
+
+.SH SYNOPSIS
+.SY dnf
+.B kpatch
+.I install\-mode
+
+.SH DESCRIPTION
+\fBdnf\-kpatch\fR is a \fBdnf\fR(8) plugin providing automated installation of
+kpatch\-patch packages. When enabled, installation of new kernel packages via
+\fBdnf\fR(8) will trigger installation of the latest kpatch-patch package
+targeting the same kernel version.
+
+.SH OPTIONS
+.TP
+.B install\-mode
+.RS
+.TP 8
+.B auto
+Installs missing kpatch\-patch packages for installed kernels and enables
+automatic kpatch\-patch installation for future kernel installations.
+.TP
+.B manual
+Disables automatic installation of kpatch-patch pacakges.
+.RE
+
+.SH SEE ALSO
+.BR dnf (8),
+.BR kpatch (1)
+
+.SH BUGS
+No known bugs.
+
+.SH REPORTING BUGS
+To report a bug, raise an issue on
+.UR https://github.com/dynup/kpatch\-dnf/issues
+kpatch\-dnf project page
+.UE .
+
+.SH AUTHOR
+.UR mailto:jthierry@redhat.com
+Julien Thierry
+.UE
+
+.SH COPYRIGHT
+Copyright (\[co]) 2020 Julien Thierry <jthierry@redhat.com>
+
+2020, Red Hat, Licensed under GPLv2+
