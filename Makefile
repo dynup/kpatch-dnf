@@ -23,11 +23,11 @@ all: $(TARGETS)
 
 install: $(TARGETS)
 	install -d $(MANDIR)
-	install man/dnf.kpatch.8.gz $(MANDIR)
+	install -m 644 man/dnf.kpatch.8.gz $(MANDIR)
 	install -d $(CONFDIR)
-	install conf/kpatch.conf $(CONFDIR)
+	install -m 644 conf/kpatch.conf $(CONFDIR)
 	install -d $(DNFPLUGINDIR)
-	install kpatch.py $(DNFPLUGINDIR)
+	install -m 644 kpatch.py $(DNFPLUGINDIR)
 
 %.gz: %
 	gzip --keep $^
