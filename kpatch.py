@@ -71,11 +71,12 @@ class KpatchCmd(dnf.cli.Command):
 
     def __init__(self, cli):
         super(KpatchCmd, self).__init__(cli)
+        self.cfg_file = _get_plugin_cfg_file(self.base.conf)
 
 
     @staticmethod
     def set_argparser(parser):
-        parser.add_argument('action', metavar="auto|manual")
+        parser.add_argument('action', metavar="auto|manual|status")
 
 
     def configure(self):
@@ -99,24 +100,34 @@ class KpatchCmd(dnf.cli.Command):
             _install_kpp_pkg(self.base, kernel_pkg)
 
 
-    def _update_plugin_cfg(self, value):
-        cfg_file = _get_plugin_cfg_file(self.base.conf)
-        if cfg_file is None:
+    def _read_conf(self):
+        if self.cfg_file is None:
             logger.warning("Couldn't find configuration file")
-            return
+            return None
         try:
             parser = configparser.ConfigParser()
-            parser.read(cfg_file)
+            parser.read(self.cfg_file)
+            return parser
         except Exception as e:
             raise dnf.exceptions.Error(_("Parsing file failed: {}").format(str(e)))
 
-        if not parser.has_section('main'):
-            parser.add_section('main')
-        parser.set('main', KPATCH_UPDATE_OPT, str(value))
+
+    def _update_plugin_cfg(self, value):
+        if self.cfg_file is None:
+            logger.warning("Couldn't find configuration file")
+            return None
+
+        conf = self._read_conf()
+        if conf is None:
+            return
+
+        if not conf.has_section('main'):
+            conf.add_section('main')
+        conf.set('main', KPATCH_UPDATE_OPT, str(value))
 
         try:
-            with open(cfg_file, 'w') as cfg_stream:
-                parser.write(cfg_stream)
+            with open(self.cfg_file, 'w') as cfg_stream:
+                conf.write(cfg_stream)
         except Exception as e:
             raise dnf.exceptions.Error(_("Failed to update conf file: {}").format(str(e)))
 
@@ -129,6 +140,14 @@ class KpatchCmd(dnf.cli.Command):
             self._update_plugin_cfg(True)
         elif action == "manual":
             self._update_plugin_cfg(False)
+        elif action == "status":
+            conf = self._read_conf()
+            kp_status = "manual"
+            if (conf is not None and conf.has_section('main') and
+                conf.has_option('main', KPATCH_UPDATE_OPT) and
+                conf.getboolean('main', KPATCH_UPDATE_OPT)):
+                kp_status = "auto"
+            logger.info(_("kpatch update setting: {}").format(kp_status))
         else:
             raise dnf.exceptions.Error(_("Invalid argument: {}").format(action))
 
