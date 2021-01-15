@@ -5,7 +5,7 @@ dnf\-kpatch \- kpatch patch module installation plugin
 .SH SYNOPSIS
 .SY dnf
 .B kpatch
-.I install\-mode
+.I operation
 
 .SH DESCRIPTION
 \fBdnf\-kpatch\fR is a \fBdnf\fR(8) plugin providing automated installation of
@@ -15,7 +15,7 @@ targeting the same kernel version.
 
 .SH OPTIONS
 .TP
-.B install\-mode
+.B operation
 .RS
 .TP 8
 .B auto
@@ -24,6 +24,9 @@ automatic kpatch\-patch installation for future kernel installations.
 .TP
 .B manual
 Disables automatic installation of kpatch-patch packages.
+.TP
+.B status
+Queries the current installation setting of \fBdnf\-kpatch\fR.
 .RE
 
 .SH SEE ALSO
