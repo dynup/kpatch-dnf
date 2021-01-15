@@ -80,10 +80,16 @@ class KpatchCmd(dnf.cli.Command):
 
     def configure(self):
         demands = self.cli.demands
-        demands.resolving = True
+
         demands.root_user = True
-        demands.sack_activation = True
-        demands.available_repos = True
+        if self.opts.action == "auto":
+            demands.resolving = True
+            demands.sack_activation = True
+            demands.available_repos = True
+        else:
+            demands.resolving = False
+            demands.sack_activation = False
+            demands.available_repos = False
 
 
     def _install_missing_kpp_pkgs(self):
