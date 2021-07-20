@@ -83,7 +83,7 @@ class KpatchCmd(dnf.cli.Command):
         demands = self.cli.demands
 
         demands.root_user = True
-        if self.opts.action in ["auto", "install"]:
+        if self.opts.action in ["auto", "install", "status"]:
             demands.resolving = True
             demands.sack_activation = True
             demands.available_repos = True
@@ -91,6 +91,26 @@ class KpatchCmd(dnf.cli.Command):
             demands.resolving = False
             demands.sack_activation = False
             demands.available_repos = False
+
+
+    def _list_missing_kpp_pkgs(self):
+        kpps = []
+
+        installed_kernels = self.base.sack.query().installed().filter(name=KERNEL_PKG_NAME)
+
+        for kernel_pkg in installed_kernels:
+            kpp_pkg_name = _kpp_name_from_kernel_pkg(kernel_pkg)
+            installed = self.base.sack.query().installed().filter(name=kpp_pkg_name).run()
+            if installed:
+                sub_q = self.base.sack.query().filter(name=kpp_pkg_name, release=installed[0].release, version=installed[0].version)
+                kpp_pkgs_query = self.base.sack.query().filter(name=kpp_pkg_name, arch=kernel_pkg.arch).latest().difference(sub_q)
+            else:
+                kpp_pkgs_query = self.base.sack.query().filter(name=kpp_pkg_name, arch=kernel_pkg.arch).latest()
+
+            for pkg in kpp_pkgs_query:
+                kpps.append(str(pkg))
+
+        return kpps
 
 
     def _install_missing_kpp_pkgs(self):
@@ -147,7 +167,12 @@ class KpatchCmd(dnf.cli.Command):
                 conf.has_option('main', KPATCH_UPDATE_OPT) and
                 conf.getboolean('main', KPATCH_UPDATE_OPT)):
                 kp_status = "auto"
-            logger.info(_("kpatch update setting: {}").format(kp_status))
+            logger.info(_("Kpatch update setting: {}").format(kp_status))
+
+            kpps = self._list_missing_kpp_pkgs()
+            if kpps:
+                logger.info(_("Available patches: {}").format(", ".join(kpps)))
+
         elif action == "install":
             self._install_missing_kpp_pkgs()
         else:
@@ -194,8 +219,8 @@ class KpatchPlugin(dnf.Plugin):
         explicit_kpp_install = []
         for tr_item in self.base.transaction:
             # It might not be safe to check tr_item.pkg.name as there might be
-            # some dnf internal transaction items not linked to any pacakge.
-            # Check first whether the action is a pacakge related action
+            # some dnf internal transaction items not linked to any package.
+            # Check first whether the action is a package related action
             if tr_item.action in dnf.transaction.FORWARD_ACTIONS:
                 if tr_item.pkg.name == KERNEL_PKG_NAME:
                     need_kpp_for.append(tr_item.pkg)
