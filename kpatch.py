@@ -76,14 +76,14 @@ class KpatchCmd(dnf.cli.Command):
 
     @staticmethod
     def set_argparser(parser):
-        parser.add_argument('action', metavar="auto|manual|status")
+        parser.add_argument('action', metavar="auto|manual|install|status")
 
 
     def configure(self):
         demands = self.cli.demands
 
         demands.root_user = True
-        if self.opts.action == "auto":
+        if self.opts.action in ["auto", "install"]:
             demands.resolving = True
             demands.sack_activation = True
             demands.available_repos = True
@@ -148,6 +148,8 @@ class KpatchCmd(dnf.cli.Command):
                 conf.getboolean('main', KPATCH_UPDATE_OPT)):
                 kp_status = "auto"
             logger.info(_("kpatch update setting: {}").format(kp_status))
+        elif action == "install":
+            self._install_missing_kpp_pkgs()
         else:
             raise dnf.exceptions.Error(_("Invalid argument: {}").format(action))
 
