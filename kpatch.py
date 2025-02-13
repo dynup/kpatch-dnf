@@ -34,6 +34,7 @@ import dnf.transaction
 
 KPATCH_PLUGIN_NAME = "kpatch"
 KPATCH_UPDATE_OPT = "autoupdate"
+KPATCH_FILTER_OPT = "autofilter"
 
 KERNEL_PKG_NAME = "kernel-core"
 
@@ -76,14 +77,21 @@ class KpatchCmd(dnf.cli.Command):
 
     @staticmethod
     def set_argparser(parser):
-        parser.add_argument('action', metavar="auto|manual|install|status")
+        """
+        argparse python class
+        """
+        parser.add_argument('action',
+                            metavar="auto-update|manual-update|" \
+                            "auto-filter|no-filter|install|status|" \
+                            "auto|manual"
+                            )
 
 
     def configure(self):
         demands = self.cli.demands
 
         demands.root_user = True
-        if self.opts.action in ["auto", "install", "status"]:
+        if self.opts.action in ["auto-update", "install", "status", "auto"]:
             demands.resolving = True
             demands.sack_activation = True
             demands.available_repos = True
@@ -132,7 +140,7 @@ class KpatchCmd(dnf.cli.Command):
             raise dnf.exceptions.Error(_("Parsing file failed: {}").format(str(e)))
 
 
-    def _update_plugin_cfg(self, value):
+    def _update_plugin_cfg(self, option, value):
         if self.cfg_file is None:
             logger.warning("Couldn't find configuration file")
             return None
@@ -143,7 +151,7 @@ class KpatchCmd(dnf.cli.Command):
 
         if not conf.has_section('main'):
             conf.add_section('main')
-        conf.set('main', KPATCH_UPDATE_OPT, str(value))
+        conf.set('main', option, str(value))
 
         try:
             with open(self.cfg_file, 'w') as cfg_stream:
@@ -155,19 +163,38 @@ class KpatchCmd(dnf.cli.Command):
     def run(self):
         action = self.opts.action
 
-        if action == "auto":
+        if action in ("auto-update", "auto"):
             self._install_missing_kpp_pkgs()
-            self._update_plugin_cfg(True)
-        elif action == "manual":
-            self._update_plugin_cfg(False)
+            self._update_plugin_cfg(KPATCH_UPDATE_OPT, True)
+            logger.info(_("Kpatch update setting: {}").format(action))
+
+        elif action in ("manual-update", "manual"):
+            self._update_plugin_cfg(KPATCH_UPDATE_OPT, False)
+            logger.info(_("Kpatch update setting: {}").format(action))
+
+        elif action == "auto-filter":
+            self._update_plugin_cfg(KPATCH_FILTER_OPT, True)
+            logger.info(_("Kpatch filter setting: {}").format(action))
+
+        elif action == "no-filter":
+            self._update_plugin_cfg(KPATCH_FILTER_OPT, False)
+            logger.info(_("Kpatch filter setting: {}").format(action))
+
         elif action == "status":
             conf = self._read_conf()
-            kp_status = "manual"
+            kp_status = "manual-update"
             if (conf is not None and conf.has_section('main') and
                 conf.has_option('main', KPATCH_UPDATE_OPT) and
                 conf.getboolean('main', KPATCH_UPDATE_OPT)):
-                kp_status = "auto"
+                kp_status = "auto-update"
             logger.info(_("Kpatch update setting: {}").format(kp_status))
+
+            kp_status = "no-filter"
+            if (conf is not None and conf.has_section('main') and
+                conf.has_option('main', KPATCH_FILTER_OPT) and
+                conf.getboolean('main', KPATCH_FILTER_OPT)):
+                kp_status = "auto-filter"
+            logger.info(_("Kpatch filter setting: {}").format(kp_status))
 
             kpps = self._list_missing_kpp_pkgs()
             if kpps:
@@ -189,6 +216,7 @@ class KpatchPlugin(dnf.Plugin):
         super(KpatchPlugin, self).__init__(base, cli)
         self._commiting = False
         self._autoupdate = False
+        self._autofilter = False
         if cli is not None:
             cli.register_command(KpatchCmd)
 
@@ -199,6 +227,9 @@ class KpatchPlugin(dnf.Plugin):
             self._autoupdate = (parser.has_section('main')
                                 and parser.has_option('main', KPATCH_UPDATE_OPT)
                                 and parser.getboolean('main', KPATCH_UPDATE_OPT))
+            self._autofilter = (parser.has_section('main')
+                                and parser.has_option('main', KPATCH_FILTER_OPT)
+                                and parser.getboolean('main', KPATCH_FILTER_OPT))
         except Exception as e:
             logger.warning(_("Parsing file failed: {}").format(str(e)))
 
