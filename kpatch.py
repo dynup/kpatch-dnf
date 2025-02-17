@@ -18,6 +18,13 @@
 # 02110-1301, USA.
 
 
+"""
+The DNF plugin helps customers to install kpatch-patch packages
+when the kernel is upgraded and filter kernel-core packages that
+are supported by the kpatch team.
+"""
+
+
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
@@ -67,13 +74,14 @@ def _install_kpp_pkg(dnf_base, kernel_pkg):
 
 
 class KpatchCmd(dnf.cli.Command):
+    """ Extend DNF with kpatch specific commands """
 
     aliases = ('kpatch',)
     summary = _('Toggles automatic installation of kpatch-patch packages')
 
 
     def __init__(self, cli):
-        super(KpatchCmd, self).__init__(cli)
+        super().__init__(cli)
         self.cfg_file = _get_plugin_cfg_file(self.base.conf)
 
 
@@ -90,6 +98,10 @@ class KpatchCmd(dnf.cli.Command):
 
 
     def configure(self):
+        """
+        configure DemandSheet
+        Collection of demands that different CLI parts have on other parts
+        """
         demands = self.cli.demands
 
         demands.root_user = True
@@ -111,11 +123,22 @@ class KpatchCmd(dnf.cli.Command):
         for kernel_pkg in installed_kernels:
             kpp_pkg_name = _kpp_name_from_kernel_pkg(kernel_pkg)
             installed = self.base.sack.query().installed().filter(name=kpp_pkg_name).run()
+
             if installed:
-                sub_q = self.base.sack.query().filter(name=kpp_pkg_name, release=installed[0].release, version=installed[0].version)
-                kpp_pkgs_query = self.base.sack.query().filter(name=kpp_pkg_name, arch=kernel_pkg.arch).latest().difference(sub_q)
+                sub_q = self.base.sack.query().filter(
+                            name=kpp_pkg_name,
+                            release=installed[0].release,
+                            version=installed[0].version
+                            )
+                kpp_pkgs_query = self.base.sack.query().filter(
+                            name=kpp_pkg_name,
+                            arch=kernel_pkg.arch
+                            ).latest().difference(sub_q)
             else:
-                kpp_pkgs_query = self.base.sack.query().filter(name=kpp_pkg_name, arch=kernel_pkg.arch).latest()
+                kpp_pkgs_query = self.base.sack.query().filter(
+                            name=kpp_pkg_name,
+                            arch=kernel_pkg.arch
+                            ).latest()
 
             for pkg in kpp_pkgs_query:
                 kpps.append(str(pkg))
@@ -145,7 +168,7 @@ class KpatchCmd(dnf.cli.Command):
     def _update_plugin_cfg(self, option, value):
         if self.cfg_file is None:
             logger.warning("Couldn't find configuration file")
-            return None
+            return
 
         conf = self._read_conf()
         if conf is None:
@@ -156,13 +179,16 @@ class KpatchCmd(dnf.cli.Command):
         conf.set('main', option, str(value))
 
         try:
-            with open(self.cfg_file, 'w') as cfg_stream:
+            with open(self.cfg_file, 'w', encoding='utf-8') as cfg_stream:
                 conf.write(cfg_stream)
         except Exception as e:
             raise dnf.exceptions.Error(_("Failed to update conf file: {}").format(str(e)))
 
 
     def run(self):
+        """
+        Decision tree, execution based on config
+        """
         action = self.opts.action
 
         if action in ("auto-update", "auto"):
@@ -204,12 +230,17 @@ class KpatchCmd(dnf.cli.Command):
 
         elif action == "install":
             self._install_missing_kpp_pkgs()
+
         else:
             raise dnf.exceptions.Error(_("Invalid argument: {}").format(action))
 
 
-
 class KpatchPlugin(dnf.Plugin):
+    """
+    The DNF plugin helps customers to install kpatch-patch packages
+    when the kernel is upgraded and filter kernel-core packages that
+    are supported by the kpatch team.
+    """
 
     name = KPATCH_PLUGIN_NAME
 
@@ -219,7 +250,7 @@ class KpatchPlugin(dnf.Plugin):
     kpatch_requirement = ['kernel', 'kernel-uname-r']
 
     def __init__(self, base, cli):
-        super(KpatchPlugin, self).__init__(base, cli)
+        super().__init__(base, cli)
         self._commiting = False
         self._autoupdate = False
         self._autofilter = False
