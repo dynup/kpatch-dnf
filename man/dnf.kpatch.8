@@ -18,12 +18,20 @@ targeting the same kernel version.
 .B operation
 .RS
 .TP 8
-.B auto
+.B auto\-update, auto
 Installs missing kpatch\-patch packages for installed kernels and enables
-automatic kpatch\-patch installation for future kernel installations.
+their automatic installation for future kernel updates.
 .TP
-.B manual
-Disables automatic installation of kpatch-patch packages.
+.B manual\-update, manual
+Disables automatic installation of kpatch\-patch packages.
+.TP
+.B auto\-filter
+Shows only the kernel packages in the DNF database that have
+a kpatch\-patch counterpart.
+.TP
+.B no\-filter
+Shows all available kernel packages, including those that do not have
+a kpatch\-patch counterpart.
 .TP
 .B install
 Installs missing kpatch\-patch packages for installed kernels.
@@ -53,4 +61,4 @@ Julien Thierry
 .SH COPYRIGHT
 Copyright (\[co]) 2020 Julien Thierry <jthierry@redhat.com>
 
-2020, Red Hat, Licensed under GPLv2+
+2024, 2020, Red Hat, Licensed under GPLv2+
